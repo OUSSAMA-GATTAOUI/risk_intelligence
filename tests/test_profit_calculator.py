@@ -1,8 +1,3 @@
-"""
-tests/test_profit_calculator.py
-Tests for calculate_profit and compare_with_without_plan.
-Run with: pytest tests/
-"""
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -62,15 +57,11 @@ class TestCalculateProfit:
     def test_fewer_workers_reduces_cost(self):
         full    = calculate_profit(FACTORY, MARKET_NORMAL, machine_speed=1.0, workers_active=30, runs=200)
         reduced = calculate_profit(FACTORY, MARKET_NORMAL, machine_speed=1.0, workers_active=10, runs=200)
-        # reduced workers means lower cost, potentially higher profit when demand is low
-        # this is a sanity check that they produce different values
         assert full != reduced
 
     def test_stable_with_high_runs(self):
-        """Two runs of 500 should be close to each other (Monte Carlo stability)."""
         r1 = calculate_profit(FACTORY, MARKET_NORMAL, machine_speed=1.0, workers_active=30, runs=500)
         r2 = calculate_profit(FACTORY, MARKET_NORMAL, machine_speed=1.0, workers_active=30, runs=500)
-        # should be within 10% of each other
         assert abs(r1 - r2) / (abs(r1) + 1) < 0.10
 
 
@@ -85,10 +76,7 @@ class TestCompareWithWithoutPlan:
         assert required.issubset(result.keys())
 
     def test_maintenance_action_improves_profit(self):
-        """Having a maintenance action should reduce failure_prob and improve profit."""
         result = compare_with_without_plan(FACTORY, MARKET_NORMAL, SAMPLE_ACTIONS)
-        # profit_with should be >= profit_without (maintenance reduces failures)
-        # This is probabilistic so we just check it's computed
         assert isinstance(result["difference"], float)
 
     def test_empty_actions_still_works(self):
