@@ -1,17 +1,9 @@
-"""
-tests/test_risk_engine.py
-Tests for risk scoring, OEE calculation, production targets, and shift plan.
-Run with: pytest tests/
-"""
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import pytest
 from risk_engine import score_risks, calculate_oee, calculate_production_targets, calculate_shift_plan
-
-
-# ── Shared fixtures ────────────────────────────────────────────────────────────
 
 FACTORY_BASE = {
     "machines": 10,
@@ -52,8 +44,6 @@ STATS_CRITICAL = {
 }
 
 
-# ── score_risks ────────────────────────────────────────────────────────────────
-
 class TestScoreRisks:
     def test_returns_seven_risks(self):
         result = score_risks(FACTORY_BASE, MARKET_NORMAL, STATS_NORMAL)
@@ -92,10 +82,6 @@ class TestScoreRisks:
         result = score_risks(FACTORY_BASE, MARKET_NORMAL, STATS_CRITICAL)
         levels = [r["level"] for r in result["risks"] if r["name"] == "Machine Failure Risk"]
         assert levels[0] in {"high", "critical"}
-
-
-# ── calculate_oee ──────────────────────────────────────────────────────────────
-
 class TestCalculateOEE:
     def test_oee_in_range(self):
         result = calculate_oee(FACTORY_BASE, MARKET_NORMAL, STATS_NORMAL)
@@ -129,9 +115,6 @@ class TestCalculateOEE:
         fast = calculate_oee(FACTORY_BASE, MARKET_NORMAL, STATS_NORMAL, machine_speed=1.3)
         assert fast["performance"] >= slow["performance"]
 
-
-# ── calculate_production_targets ──────────────────────────────────────────────
-
 class TestProductionTargets:
     def test_max_units_gte_projected(self):
         result = calculate_production_targets(FACTORY_BASE, MARKET_NORMAL, STATS_NORMAL)
@@ -158,10 +141,6 @@ class TestProductionTargets:
         result = calculate_production_targets(FACTORY_BASE, MARKET_NORMAL, STATS_NORMAL)
         expected = FACTORY_BASE["product_price"] - FACTORY_BASE["material_cost"]
         assert abs(result["margin_per_unit"] - expected) < 0.01
-
-
-# ── calculate_shift_plan ──────────────────────────────────────────────────────
-
 class TestShiftPlan:
     def test_returns_three_shifts(self):
         plan = calculate_shift_plan(FACTORY_BASE, MARKET_NORMAL, STATS_NORMAL)
@@ -170,7 +149,6 @@ class TestShiftPlan:
     def test_worker_counts_sum_close_to_total(self):
         plan  = calculate_shift_plan(FACTORY_BASE, MARKET_NORMAL, STATS_NORMAL)
         total = sum(s["workers"] for s in plan)
-        # rounding means ±3 is acceptable
         assert abs(total - FACTORY_BASE["workers"]) <= 3
 
     def test_each_shift_has_required_keys(self):
