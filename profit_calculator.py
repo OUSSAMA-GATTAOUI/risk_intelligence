@@ -46,7 +46,6 @@ def compare_with_without_plan(factory_inputs, market_inputs, actions,
     recommended_speed   = 1.0
     recommended_workers = factory_inputs.get("workers", 30)
 
-    # Use ML recommendation directly — no fragile regex parsing
     if ml_recommendation:
         recommended_speed   = ml_recommendation.get("machine_speed",  recommended_speed)
         recommended_workers = ml_recommendation.get("workers_active", recommended_workers)
@@ -66,8 +65,6 @@ def compare_with_without_plan(factory_inputs, market_inputs, actions,
         if a["type"] in ("energy", "cost", "quality", "strategy") and a["saving"] > 0
     )
 
-    # 15% realisation factor: accounts for partial execution, ramp-up time,
-    # and the fact that not every action saves its full theoretical amount on day 1.
     REALISATION_RATE = 0.15
     total_with = profit_with_ops + non_maintenance_savings * REALISATION_RATE
 
