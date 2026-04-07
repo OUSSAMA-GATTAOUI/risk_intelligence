@@ -70,7 +70,6 @@ def generate_report(
     story.append(mt)
     story.append(Spacer(1, 0.3*cm))
 
-    # ── Profit Impact ─────────────────────────────────────────────────
     story.append(Paragraph("💰 Profit Impact Summary", h2_s))
     diff = profit_comparison["difference"]
     pct  = profit_comparison["improvement_pct"]
@@ -97,8 +96,6 @@ def generate_report(
     ]))
     story.append(pt)
     story.append(Spacer(1, 0.3*cm))
-
-    # ── OEE ──────────────────────────────────────────────────────────
     if oee_data:
         story.append(Paragraph("📊 OEE — Overall Equipment Effectiveness", h2_s))
         oee_table_data = [
@@ -121,8 +118,6 @@ def generate_report(
         ]))
         story.append(ot)
         story.append(Spacer(1, 0.3*cm))
-
-    # ── Production Targets ────────────────────────────────────────────
     if prod_targets:
         story.append(Paragraph("🎯 Production Targets", h2_s))
         pt2_data = [
@@ -147,7 +142,6 @@ def generate_report(
         story.append(pt2)
         story.append(Spacer(1, 0.3*cm))
 
-    # ── Shift Plan ────────────────────────────────────────────────────
     if shift_plan:
         story.append(Paragraph("🕐 Recommended Shift Plan", h2_s))
         sp_data = [["Shift", "Time", "Workers", "Speed", "Energy Cost"]]
@@ -172,8 +166,6 @@ def generate_report(
         ]))
         story.append(spt)
         story.append(Spacer(1, 0.3*cm))
-
-    # ── Risk Scorecard ────────────────────────────────────────────────
     story.append(Paragraph("⚠️ Risk Scorecard", h2_s))
     risk_data = [["Risk", "Level", "Value", "Impact"]]
     for r in risk_result["risks"]:
