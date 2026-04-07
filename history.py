@@ -1,22 +1,3 @@
-"""
-history.py — Session History & Trend Tracker
----------------------------------------------
-Persists every analysis run to a local SQLite database so managers
-can track risk evolution, OEE trends, and profit improvements over time.
-
-Usage
------
-    from history import HistoryDB
-    db = HistoryDB()                          # opens/creates risk_history.db
-    db.save_session(risk_result, oee, profit) # call after each analysis
-    df = db.load_sessions(days=7)             # returns last-7-days DataFrame
-    db.close()
-
-Tables
-------
-    sessions  — one row per analysis run
-    risks     — one row per risk category per run (7 rows per session)
-"""
 
 import sqlite3
 import json
@@ -29,16 +10,12 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "risk_history.db")
 
 
 class HistoryDB:
-    """Lightweight SQLite wrapper for session history."""
 
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self._create_tables()
 
-    # ------------------------------------------------------------------
-    # Schema
-    # ------------------------------------------------------------------
 
     def _create_tables(self):
         cur = self.conn.cursor()
@@ -82,9 +59,7 @@ class HistoryDB:
 
         self.conn.commit()
 
-    # ------------------------------------------------------------------
-    # Write
-    # ------------------------------------------------------------------
+
 
     def save_session(
         self,
@@ -96,23 +71,6 @@ class HistoryDB:
         market_inputs:    dict = None,
         extra:            dict = None,
     ) -> int:
-        """
-        Persist one complete analysis run.
-
-        Parameters
-        ----------
-        risk_result        : output of risk_engine.score_risks()
-        oee_result         : output of risk_engine.calculate_oee()
-        profit_comparison  : output of profit_calculator.compare_with_without_plan()
-        factory_name       : free-text label shown in the UI
-        industry           : industry key (e.g. "machining")
-        market_inputs      : the market_inputs dict used for this run
-        extra              : any additional JSON-serialisable dict (e.g. ML info)
-
-        Returns
-        -------
-        session_id (int)
-        """
         market = market_inputs or {}
         now    = datetime.datetime.now().isoformat()
 
@@ -150,8 +108,6 @@ class HistoryDB:
         ))
 
         session_id = cur.lastrowid
-
-        # Save individual risk rows
         for r in risk_result.get("risks", []):
             cur.execute("""
                 INSERT INTO risks (session_id, name, level, raw_value)
@@ -161,15 +117,9 @@ class HistoryDB:
         self.conn.commit()
         return session_id
 
-    # ------------------------------------------------------------------
-    # Read
-    # ------------------------------------------------------------------
 
     def load_sessions(self, days: int = 30) -> pd.DataFrame:
-        """
-        Return the last `days` days of sessions as a DataFrame,
-        newest first.
-        """
+
         cutoff = (datetime.datetime.now() - datetime.timedelta(days=days)).isoformat()
         df = pd.read_sql_query(
             "SELECT * FROM sessions WHERE timestamp >= ? ORDER BY timestamp DESC",
@@ -181,9 +131,6 @@ class HistoryDB:
         return df
 
     def load_risk_trend(self, risk_name: str, days: int = 30) -> pd.DataFrame:
-        """
-        Return the historical level & raw_value for a specific risk category.
-        """
         cutoff = (datetime.datetime.now() - datetime.timedelta(days=days)).isoformat()
         df = pd.read_sql_query(
             """
@@ -245,14 +192,6 @@ class HistoryDB:
 # ---------------------------------------------------------------------------
 
 def render_history_tab(db: HistoryDB, currency_symbol: str = "€"):
-    """
-    Drop-in Streamlit UI block for a 'History' tab.
-
-    Call inside `with tab_history:` (or anywhere in your app):
-        from history import HistoryDB, render_history_tab
-        db = HistoryDB()
-        render_history_tab(db, currency_symbol="€")
-    """
     try:
         import streamlit as st
         import plotly.graph_objects as go
@@ -274,8 +213,6 @@ def render_history_tab(db: HistoryDB, currency_symbol: str = "€"):
     if df.empty:
         st.warning(f"No sessions in the last {days} days.")
         return
-
-    # ── KPI summary ──────────────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Sessions analysed",  len(df))
     c2.metric("Avg OEE",            f"{df['oee'].mean():.1f}%")
@@ -284,7 +221,6 @@ def render_history_tab(db: HistoryDB, currency_symbol: str = "€"):
 
     st.markdown("---")
 
-    # ── OEE trend ────────────────────────────────────────────────────
     fig_oee = go.Figure()
     fig_oee.add_trace(go.Scatter(
         x=df["timestamp"], y=df["oee"],
@@ -307,7 +243,6 @@ def render_history_tab(db: HistoryDB, currency_symbol: str = "€"):
     )
     st.plotly_chart(fig_oee, use_container_width=True)
 
-    # ── Health score trend ───────────────────────────────────────────
     fig_hs = go.Figure()
     fig_hs.add_trace(go.Scatter(
         x=df["timestamp"], y=df["health_score"],
@@ -327,8 +262,6 @@ def render_history_tab(db: HistoryDB, currency_symbol: str = "€"):
         yaxis=dict(gridcolor="rgba(255,255,255,0.05)", range=[0, 105]),
     )
     st.plotly_chart(fig_hs, use_container_width=True)
-
-    # ── Risk level breakdown ─────────────────────────────────────────
     fig_risk = go.Figure()
     for col, color, label in [
         ("critical_count", "#ff4757", "Critical"),
@@ -354,7 +287,6 @@ def render_history_tab(db: HistoryDB, currency_symbol: str = "€"):
     )
     st.plotly_chart(fig_risk, use_container_width=True)
 
-    # ── Profit gain trend ────────────────────────────────────────────
     fig_profit = go.Figure()
     fig_profit.add_trace(go.Bar(
         x=df["timestamp"], y=df["profit_gain"],
@@ -376,7 +308,6 @@ def render_history_tab(db: HistoryDB, currency_symbol: str = "€"):
     )
     st.plotly_chart(fig_profit, use_container_width=True)
 
-    # ── Raw table ────────────────────────────────────────────────────
     with st.expander("Raw session data"):
         display_cols = [
             "timestamp", "factory_name", "industry", "overall_level",
