@@ -1,20 +1,3 @@
-"""
-ml_engine.py — Machine Learning Core  (v2 — with persistence & explainability)
--------------------------------------------------------------------------------
-Changes vs v1
-~~~~~~~~~~~~~
-  1. Model persistence — trained GBM and Q-table are saved to disk with joblib
-     so the engine only retrains when factory config changes or new CSV is uploaded.
-     Cache key = hash of factory_inputs + data-source string.
-
-  2. Feature importance — GradientBoostingModel.feature_importance() returns a
-     ranked list of (feature_name, importance_pct) ready for the UI.
-     Optional: if `shap` is installed, get_shap_explanation() returns richer
-     per-prediction driver text, otherwise graceful fallback to built-in importances.
-
-  3. Training signature unchanged — callers in app.py require NO changes.
-"""
-
 from __future__ import annotations
 from typing import List, Dict, Optional
 
@@ -27,21 +10,18 @@ import os
 from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler
 
-# joblib ships with scikit-learn — no extra pip needed
 try:
     import joblib
     _JOBLIB_AVAILABLE = True
 except ImportError:
     _JOBLIB_AVAILABLE = False
 
-# shap is optional — install with: pip install shap
 try:
     import shap as _shap
     _SHAP_AVAILABLE = True
 except ImportError:
     _SHAP_AVAILABLE = False
 
-# Where cached models live (next to this file)
 _CACHE_DIR = os.path.join(os.path.dirname(__file__), ".model_cache")
 
 
@@ -54,10 +34,6 @@ def _cache_key(factory_inputs: dict, data_source: str) -> str:
     payload = json.dumps(factory_inputs, sort_keys=True) + data_source
     return hashlib.md5(payload.encode()).hexdigest()[:12]
 
-
-# ---------------------------------------------------------------------------
-# GradientBoostingModel
-# ---------------------------------------------------------------------------
 
 class GradientBoostingModel:
     def __init__(self):
@@ -83,9 +59,6 @@ class GradientBoostingModel:
             "demand_mult",
         ]
 
-    # ------------------------------------------------------------------
-    # Synthetic data generator (UCI AI4I 2020 inspired)
-    # ------------------------------------------------------------------
 
     def _generate_synthetic_data(self, n: int = 3000):
         np.random.seed(42)
@@ -128,10 +101,6 @@ class GradientBoostingModel:
         )
         return X, y_failure, y_energy, y_quality
 
-    # ------------------------------------------------------------------
-    # Training
-    # ------------------------------------------------------------------
-
     def train(self, df=None, column_mapping=None):
         if df is not None:
             try:
@@ -155,7 +124,7 @@ class GradientBoostingModel:
             source = "synthetic data (3,000 records)"
 
         X_scaled        = self.scaler.fit_transform(X)
-        self._X_train   = X_scaled          # store for SHAP background
+        self._X_train   = X_scaled          
         self.failure_model.fit(X_scaled, y_failure)
         self.energy_model.fit(X_scaled, y_energy)
         self.quality_model.fit(X_scaled, y_quality)
@@ -171,9 +140,6 @@ class GradientBoostingModel:
             "features":         self.feature_names,
         }
 
-    # ------------------------------------------------------------------
-    # Prediction
-    # ------------------------------------------------------------------
 
     def predict(self, speed, torque, tool_wear, temp_diff,
                 energy_mult: float = 1.0, demand_mult: float = 1.0) -> dict:
@@ -193,20 +159,8 @@ class GradientBoostingModel:
             "energy_per_machine": round(energy_per_m, 3),
             "quality_score":      round(quality_score, 3),
         }
-
-    # ------------------------------------------------------------------
-    # Explainability
-    # ------------------------------------------------------------------
-
     def feature_importance(self) -> List[Dict]:
-        """
-        Return ranked feature importances for the failure classifier.
 
-        Returns
-        -------
-        List of dicts sorted by importance desc:
-            [{"feature": "tool_wear", "importance_pct": 42.1}, ...]
-        """
         if not self.trained:
             return []
 
@@ -219,29 +173,19 @@ class GradientBoostingModel:
         return sorted(pairs, key=lambda x: x["importance_pct"], reverse=True)
 
     def get_top_failure_drivers(self, n: int = 3) -> List[str]:
-        """
-        Return plain-English sentences for the top-N failure drivers.
-        Uses SHAP if available, otherwise falls back to GBM importances.
 
-        Example output:
-            ["Tool wear is the #1 driver of your failure risk (42%)",
-             "Temperature difference accounts for 28% of predicted failure",
-             "Machine speed setting contributes 15%"]
-        """
         if not self.trained:
             return ["Model not trained — run analysis first."]
 
         importance = self.feature_importance()[:n]
 
-        # -- SHAP path (richer, per-prediction) --
         if _SHAP_AVAILABLE and self._X_train is not None:
             try:
                 explainer   = _shap.TreeExplainer(self.failure_model)
-                # use median of training set as background
                 background  = self._X_train[::max(1, len(self._X_train) // 100)]
                 shap_values = explainer.shap_values(background)
                 if isinstance(shap_values, list):
-                    shap_values = shap_values[1]     # class-1 (failure)
+                    shap_values = shap_values[1]     
                 mean_abs    = np.abs(shap_values).mean(axis=0)
                 total_abs   = mean_abs.sum() or 1.0
                 shap_pairs  = sorted(
@@ -258,9 +202,7 @@ class GradientBoostingModel:
                     )
                 return drivers
             except Exception:
-                pass  # fall through to importance fallback
-
-        # -- Fallback: GBM built-in importances --
+                pass 
         ordinals = ["#1", "#2", "#3", "#4", "#5"]
         drivers  = []
         for i, row in enumerate(importance):
@@ -270,10 +212,6 @@ class GradientBoostingModel:
                 f"({row['importance_pct']}% importance)"
             )
         return drivers
-
-    # ------------------------------------------------------------------
-    # Persistence
-    # ------------------------------------------------------------------
 
     def save(self, path: str):
         if not _JOBLIB_AVAILABLE:
@@ -304,10 +242,6 @@ class GradientBoostingModel:
         except Exception:
             return False
 
-
-# ---------------------------------------------------------------------------
-# QLearningAgent
-# ---------------------------------------------------------------------------
 
 class QLearningAgent:
     SPEEDS  = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4]
@@ -410,9 +344,6 @@ class QLearningAgent:
             "source":          "rl_agent",
         }
 
-    # ------------------------------------------------------------------
-    # Persistence
-    # ------------------------------------------------------------------
 
     def save(self, path: str):
         if not _JOBLIB_AVAILABLE:
@@ -439,23 +370,7 @@ class QLearningAgent:
         except Exception:
             return False
 
-
-# ---------------------------------------------------------------------------
-# MLEngine  — public API (unchanged signature, new cache + explainability)
-# ---------------------------------------------------------------------------
-
 class MLEngine:
-    """
-    Wraps GradientBoostingModel + QLearningAgent.
-
-    NEW in v2
-    ---------
-    - train() caches trained models to .model_cache/ and reloads on the
-      next call with the same factory config.  Pass force_retrain=True to
-      bypass the cache.
-    - get_feature_importance() — ranked GBM importances for the UI.
-    - get_failure_drivers()    — plain-English top-3 failure drivers.
-    """
 
     def __init__(self):
         self.gbm        = GradientBoostingModel()
@@ -463,11 +378,6 @@ class MLEngine:
         self.trained    = False
         self.train_info = {}
         self._cache_key = None
-
-    # ------------------------------------------------------------------
-    # Training with cache
-    # ------------------------------------------------------------------
-
     def train(
         self,
         factory_inputs:  dict,
@@ -476,25 +386,12 @@ class MLEngine:
         episodes:        int  = 2000,
         force_retrain:   bool = False,
     ) -> dict:
-        """
-        Train (or reload from cache).
 
-        Parameters
-        ----------
-        factory_inputs : factory config dict
-        df             : uploaded CSV DataFrame (or None → synthetic)
-        column_mapping : manual column mapping (or None → auto-detect)
-        episodes       : RL training episodes
-        force_retrain  : ignore cache and always retrain
-        """
-
-        # Determine data source label for the cache key
         data_source = "csv" if df is not None else "synthetic"
         ck          = _cache_key(factory_inputs, data_source)
         gbm_path    = os.path.join(_CACHE_DIR, f"gbm_{ck}.joblib")
         rl_path     = os.path.join(_CACHE_DIR, f"rl_{ck}.joblib")
 
-        # -- Try cache first --
         if not force_retrain and _JOBLIB_AVAILABLE:
             gbm_loaded = self.gbm.load(gbm_path)
             rl_loaded  = self.agent.load(rl_path)
@@ -518,7 +415,6 @@ class MLEngine:
                 self._cache_key = ck
                 return self.train_info
 
-        # -- Full training --
         gbm_info = self.gbm.train(df, column_mapping=column_mapping)
 
         scenarios = [
@@ -529,7 +425,6 @@ class MLEngine:
         ]
         rl_info = self.agent.train(factory_inputs, scenarios, self.gbm, episodes=episodes)
 
-        # Save to cache
         if _JOBLIB_AVAILABLE:
             self.gbm.save(gbm_path)
             self.agent.save(rl_path)
@@ -543,9 +438,7 @@ class MLEngine:
         }
         return self.train_info
 
-    # ------------------------------------------------------------------
-    # Recommendation (unchanged)
-    # ------------------------------------------------------------------
+
 
     def recommend(self, factory_inputs: dict, market_inputs: dict) -> dict:
         if not self.trained:
@@ -584,19 +477,13 @@ class MLEngine:
                            demand_mult: float = 1.0) -> dict:
         return self.gbm.predict(speed, torque, tool_wear, temp_diff, energy_mult, demand_mult)
 
-    # ------------------------------------------------------------------
-    # Explainability helpers
-    # ------------------------------------------------------------------
+
 
     def get_feature_importance(self) -> list[dict]:
-        """Return sorted GBM feature importances for the failure classifier."""
         return self.gbm.feature_importance()
 
     def get_failure_drivers(self, n: int = 3) -> list[str]:
-        """
-        Return top-N plain-English failure driver sentences.
-        Uses SHAP if installed, falls back to GBM importances.
-        """
+
         return self.gbm.get_top_failure_drivers(n=n)
 
     def cache_status(self) -> dict:
