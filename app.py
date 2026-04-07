@@ -25,7 +25,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Inject particle canvas + advanced CSS from _visual_engine
 _ve_inject()
 
 st.markdown("""
@@ -56,7 +55,6 @@ st.markdown("""
     color: var(--text);
 }
 
-/* ── ANIMATED BACKGROUND ─────────────────────────────── */
 #fiq-bg {
     position: fixed;
     inset: 0;
@@ -93,7 +91,6 @@ st.markdown("""
     100% { opacity: 1.2; }
 }
 
-/* ── SIDEBAR ─────────────────────────────────────────── */
 [data-testid="stSidebar"] {
     background: #080f1e !important;
     border-right: 1px solid var(--border);
@@ -154,7 +151,7 @@ st.markdown("""
     transform: translateY(-2px) !important;
 }
 
-/* ── TABS ────────────────────────────────────────────── */
+
 .stTabs [data-baseweb="tab-list"] {
     background: #080f1e;
     border-bottom: 1px solid var(--border);
@@ -186,7 +183,7 @@ st.markdown("""
     border-bottom-color: var(--cyan) !important;
 }
 
-/* ── METRIC CARDS ────────────────────────────────────── */
+
 .metric-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -259,7 +256,7 @@ st.markdown("""
 }
 .metric-sub { font-size: 0.82rem; color: var(--muted); }
 
-/* ── SECTION HEADERS ─────────────────────────────────── */
+
 .section-header {
     font-family: 'Rajdhani', sans-serif;
     font-size: 1.3rem;
@@ -285,7 +282,7 @@ st.markdown("""
     to { width: 100%; }
 }
 
-/* ── RISK CARDS ──────────────────────────────────────── */
+
 .risk-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -334,7 +331,7 @@ st.markdown("""
 .badge-medium   { background: rgba(245,158,11,0.15); color: var(--amber);  border: 1px solid rgba(245,158,11,0.3); }
 .badge-low      { background: rgba(0,255,135,0.12);  color: var(--green);  border: 1px solid rgba(0,255,135,0.3); }
 
-/* ── ACTION CARDS ────────────────────────────────────── */
+
 .action-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -377,7 +374,6 @@ st.markdown("""
 .action-detail { font-size: 0.88rem; color: #7a9ab8; line-height: 1.5; }
 .action-saving { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 500; margin-top: 0.5rem; }
 
-/* ── OEE / PROGRESS BARS ─────────────────────────────── */
 .oee-bar-container {
     background: #060b14;
     border-radius: 6px;
@@ -408,7 +404,6 @@ st.markdown("""
     100% { transform: translateX(200%); }
 }
 
-/* ── MACHINE GRID ────────────────────────────────────── */
 .machine-grid {
     display: flex;
     flex-wrap: wrap;
@@ -467,7 +462,7 @@ st.markdown("""
     to   { opacity: 1; transform: scale(1); }
 }
 
-/* ── TOPBAR ──────────────────────────────────────────── */
+
 .topbar {
     background: linear-gradient(135deg, #0d1627 0%, #0a1422 100%);
     border: 1px solid var(--border);
@@ -696,7 +691,6 @@ hr { border-color: var(--border) !important; }
 st.markdown('<div id="fiq-bg"></div>', unsafe_allow_html=True)
 
 
-# ── SIDEBAR ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
     <div class="sidebar-brand">
@@ -795,7 +789,6 @@ with st.sidebar:
             st.sidebar.info("Cache is already empty.")
 
 
-# ── Inputs dict ───────────────────────────────────────────────────────────────
 factory_inputs = {
     "machines":              machines,
     "workers":               workers,
@@ -893,7 +886,6 @@ if run_btn:
         profit_comp  = compare_with_without_plan(factory_inputs, market_inputs, actions, dataset_stats,
                                                   ml_recommendation=ml_rec)
 
-        # Persist session to history DB
         if "history_db" not in st.session_state:
             st.session_state["history_db"] = HistoryDB()
         st.session_state["history_db"].save_session(
@@ -903,7 +895,6 @@ if run_btn:
             market_inputs=market_inputs,
         )
 
-        # Cache everything — tab switches no longer reset the UI
         st.session_state["fiq_cache"] = dict(
             engine=engine, ml_info=ml_info, ml_rec=ml_rec,
             risk_result=risk_result, oee_data=oee_data,
@@ -918,12 +909,12 @@ if run_btn:
             demand_mult=demand_mult, energy_mult=energy_mult,
             material_mult=material_mult,
         )
-        # Reset simulator sliders to match fresh analysis
+
         for _k in ("sim_d", "sim_e", "sim_m", "sim_sp", "sim_wk", "sim_md"):
             if _k in st.session_state:
                 del st.session_state[_k]
 
-# Unpack from cache — works on first run AND after every tab switch
+
 _c           = st.session_state["fiq_cache"]
 engine       = _c["engine"]
 ml_info      = _c["ml_info"]
@@ -1033,7 +1024,6 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 ])
 
 
-# ── TAB 1: Dashboard ──────────────────────────────────────────────────────────
 with tab1:
     c1, c2, c3, c4 = st.columns(4)
 
