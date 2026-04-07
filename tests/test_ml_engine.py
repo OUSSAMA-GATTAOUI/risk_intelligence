@@ -1,8 +1,3 @@
-"""
-tests/test_ml_engine.py
-Tests for GradientBoostingModel, QLearningAgent, and MLEngine.
-Run with: pytest tests/
-"""
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -30,12 +25,10 @@ MARKET = {
 }
 
 
-# ── GradientBoostingModel ─────────────────────────────────────────────────────
-
 class TestGradientBoostingModel:
     def setup_method(self):
         self.model = GradientBoostingModel()
-        self.model.train()  # synthetic data, fast
+        self.model.train() 
 
     def test_train_returns_info(self):
         info = GradientBoostingModel().train()
@@ -71,7 +64,7 @@ class TestGradientBoostingModel:
     def test_feature_importance_sums_to_100(self):
         importance = self.model.feature_importance()
         total = sum(item["importance_pct"] for item in importance)
-        assert abs(total - 100.0) < 1.0  # allow rounding tolerance
+        assert abs(total - 100.0) < 1.0 
 
     def test_failure_drivers_returns_strings(self):
         drivers = self.model.get_top_failure_drivers(n=3)
@@ -83,8 +76,6 @@ class TestGradientBoostingModel:
         with pytest.raises(RuntimeError):
             fresh.predict(1.0, 40.0, 100.0, 10.0)
 
-
-# ── QLearningAgent ────────────────────────────────────────────────────────────
 
 class TestQLearningAgent:
     def setup_method(self):
@@ -113,8 +104,6 @@ class TestQLearningAgent:
     def test_trained_flag_set(self):
         assert self.agent.trained is True
 
-
-# ── MLEngine ──────────────────────────────────────────────────────────────────
 
 class TestMLEngine:
     def setup_method(self):
